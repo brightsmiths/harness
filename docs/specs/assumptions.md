@@ -1,0 +1,32 @@
+# Assumptions
+
+Assumptions made while writing this spec, why each was challenged, and how it was resolved.
+**Status:**
+
+- **Decided:** confirmed by the maintainers.
+- **Default:** a stated default, to be revisited if a consumer disagrees.
+- **Open:** needs a decision from the named owner before the affected work item starts.
+
+| ID | Assumption | Challenged because | Resolution | Status / impact |
+| --- | --- | --- | --- | --- |
+| AS-01 | One repository holds core and the software pack | Handbook open question 2 offers per-pack repositories | [ADR-0001](../adr/ADR-0001-single-repository-with-discipline-packs.md): one repository now; external packs by version at L4 | Decided |
+| AS-02 | The harness owns all cross-service schemas | The brief says "agreed with" consumers, which could mean consumers own them | [ADR-0002](../adr/ADR-0002-harness-owns-cross-service-schemas.md): harness authors, consumers approve PRs; schemas marked "proposed, pending consumer agreement" | Decided |
+| AS-03 | "Not writable by any agent role" still allows the factory to build L2–L4 | The brief says both "L2–L4 by the factory" and "must not be writable by any agent role" | [ADR-0006](../adr/ADR-0006-write-protection-model.md): no agent writes the harness in force; `harness-author` writes a checkout when the harness is the target; H8 and release required | Decided. **Depends on agent-gate L2** supporting a repository-level `.factory/roles.yaml`. Owner: agent-gate |
+| AS-04 | The oracle manifest is produced and signed outside the agent | Zone B writes the oracle, but the microVM holds no secrets, so the agent cannot sign | Proposed: sandbox-runner runs `oracle-guard lock` after the agent finishes and signs with the oracle role's KMS key ([roles-and-paths.md](roles-and-paths.md#open-items-for-consumers)) | Open. Owners: oracle-guard, sandbox-runner |
+| AS-05 | Cross-file checks (role exists, paths within write set, graph resolution, threshold monotonicity) can run in CI without "service code" | HR-MN-02 forbids service code; most of these checks cannot be expressed as JSON Schema | Default: CI uses off-the-shelf validators; cross-file checks are H8 review items until a validator tool exists in another repository (candidate: a `harness lint` subcommand in gate-warden or a small separate CLI) | Open. Owner: harness maintainers |
+| AS-06 | L1 runs without G5 (red-check) | The brief's L1 lists only G6-lite. Without red-check, a locked test that asserts nothing passes | L1 accepts the gap for the pilot; G5 added at L2 (HR-L2-08), beyond the brief's L2 list | Default. Confirm adding G5 at L2 |
+| AS-07 | At T0–T1, unit-oracle writes tests against `spec/contracts/**` without seeing `src/` | Rust locked tests must compile against real types. Blind tests may not compile, and the builder may not edit them | Default: humans write contracts for L1 issues precisely enough to compile against; compile failures in locked tests become disputes. Alternative: give zone B a read-only, stub-only snapshot of the seam files | Open. Owners: CogWorks, agent-gate, oracle-guard |
+| AS-08 | Result adapters (`exit-code`, `junit-xml`, `sarif`) are provided by gate-warden | Tools like `cargo fmt` do not emit the gate result format, and the harness may not contain code | Adapters are generic formats, not discipline-specific, so they belong in gate-warden | Default. Confirm with gate-warden |
+| AS-09 | Builder's own tests compile through `tests/own/main.rs` | Cargo does not discover files in `tests/own/` otherwise; `[[test]]` entries are oracle-guarded configuration | Path convention in [roles-and-paths.md](roles-and-paths.md) | Default. Confirm with oracle-guard |
+| AS-10 | A run keeps the harness version it started with | A pin change mid-run could change rules between stages | Default: the version in the run's first stage attestation applies to the whole run | Open. Owner: CogWorks |
+| AS-11 | `graphs/t3.yaml`, T3 thresholds and `*.t3` variants are L4 | The brief's L4 does not list them, but the roadmap puts T3 in M7 | Listed as HR-L4-05 | Default |
+| AS-12 | G3 "stubs compile" can be checked for contracts kept under `spec/contracts/` | Rust stubs normally live in `src/`; a separate location needs a buildable crate layout | To be designed with the `contract` profile at L2 | Open. Owner: harness maintainers (L2) |
+| AS-13 | Constitutional rules move to the harness at L1 | The brief's layout says "moved from CogWorks" but the L1 list does not include it | HR-L1-10: format and core rules at L1, so CogWorks L1 can load them from the pinned harness | Default |
+| AS-14 | Pin and risk-map schemas are needed at L1 | Not in the brief's L1 list, but CogWorks L1 needs the pin to resolve profiles and the tier | HR-L1-03 includes minimal versions | Default |
+| AS-15 | L1 needs four skills (`rust-conventions`, `rust-test-patterns`, `crash-only-resource-lifecycle`, `dispute-protocol`) | The brief lists skills only from L2 | Porting moves toolchain and shared content out of personas (ADR-0007), so skills are needed at L1 | Default |
+| AS-16 | The tool allowlist belongs in the stage contract | The handbook's profile anatomy lists a tool allowlist, but its stage contract example has no such field | `tools` field in the stage contract | Default |
+| AS-17 | Profiles name a model capability class, not a model | Model diversity between zones B and C is an open experiment (handbook open question 7) | Optional `model_class`; gateway pins versions | Default |
+| AS-18 | The repository name is not final | The brief: "`factory-harness` is the working name" | The specs say "the harness" throughout; only URLs mention `brightsmiths/harness` | Default |
+| AS-19 | nextest can exclude `tests/own` from pass/fail through an oracle-owned profile | Needs a nextest configuration that is both expressive enough and guarded | [gates.md](gates.md) G6-lite note, with a fallback of a separate optional check | Default. Verify during L1 |
+| AS-20 | Spec location `docs/specs/` | Sibling repositories differ (Entry Sentinel `docs/specs/`, commit-gate `docs/spec/`) | Follow Entry Sentinel; avoids confusion with target repos' root `spec/` | Decided |
+| AS-21 | Output schemas specific to a discipline live in the pack | The brief's layout puts output schemas in core `schemas/`, which would put software content outside `disciplines/` | Neutral envelopes in `schemas/outputs/`; pack outputs in `disciplines/<d>/schemas/outputs/` | Default |
